@@ -1,0 +1,14 @@
+{
+  "name": "a3-ftx",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "editor": "npm run dev -w @a3-ftx/editor",
+    "vr": "npm run dev -w @a3-ftx/vr",
+    "build": "npm run build -w @a3-ftx/shared && npm run build -w @a3-ftx/editor && npm run build -w @a3-ftx/vr",
+    "build:shared": "npm run build -w @a3-ftx/shared"
+  }
+}

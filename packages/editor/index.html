@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Al-Rimal Map Editor</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <aside id="toolbar">
+        <header>
+          <h1>Al-Rimal Editor</h1>
+          <p class="sub">Trace the reference · multi-height stacks</p>
+        </header>
+
+        <section>
+          <h2>Edit</h2>
+          <div class="row">
+            <button type="button" id="btn-undo" title="Ctrl+Z">Undo</button>
+            <button type="button" id="btn-redo" title="Ctrl+Y">Redo</button>
+          </div>
+          <button type="button" id="btn-clear-models" class="danger secondary">
+            Clear all models
+          </button>
+          <p class="hint">Removes buildings, vehicles, lights &amp; bushes. Roads stay. Undoable.</p>
+        </section>
+
+        <section>
+          <h2>Tool</h2>
+          <div class="tool-grid" id="tools">
+            <button type="button" data-tool="building" class="active">Building</button>
+            <button type="button" data-tool="preset">Place plan</button>
+            <button type="button" data-tool="road">Road path</button>
+            <button type="button" data-tool="light">Street light</button>
+            <button type="button" data-tool="vehicle">Vehicle</button>
+            <button type="button" data-tool="bush">Bush</button>
+            <button type="button" data-tool="erase">Erase</button>
+            <button type="button" data-tool="select">Select / Move</button>
+          </div>
+        </section>
+
+        <section id="building-opts">
+          <h2>Building</h2>
+          <label>Color
+            <select id="color">
+              <option value="red">Red</option>
+              <option value="blue">Blue</option>
+              <option value="green">Green</option>
+              <option value="olive">Olive</option>
+              <option value="yellow">Yellow</option>
+              <option value="grey">Grey</option>
+            </select>
+          </label>
+          <label>Stack height
+            <input id="height" type="range" min="1" max="6" value="2" />
+            <span id="height-val">2</span>
+          </label>
+          <label>Special
+            <select id="special">
+              <option value="">None</option>
+              <option value="hospital">Hospital (red cross)</option>
+              <option value="mosque">Mosque</option>
+              <option value="church">Church (steeple)</option>
+              <option value="station">Station</option>
+            </select>
+          </label>
+          <label>Label (e.g. A5)
+            <input id="label" type="text" placeholder="A5" maxlength="8" />
+          </label>
+        </section>
+
+        <section id="preset-opts" class="hidden">
+          <h2>Place building plan</h2>
+          <label>Plan
+            <select id="preset-select"></select>
+          </label>
+          <label>Color
+            <select id="preset-color" class="color-select"></select>
+          </label>
+          <label>Label (e.g. A5)
+            <input id="preset-label" type="text" placeholder="defaults to plan name" maxlength="12" />
+          </label>
+          <label>Special
+            <select id="preset-special" class="special-select"></select>
+          </label>
+          <div class="row">
+            <button type="button" id="btn-preset-rotate">Rotate (R)</button>
+            <span id="preset-rot" class="pill">0°</span>
+          </div>
+          <p class="hint">Move to preview; click to stamp anywhere (no grid / overlap lock).</p>
+        </section>
+
+        <section>
+          <h2>Building plans</h2>
+          <div id="preset-list" class="preset-list"></div>
+          <div class="row">
+            <button type="button" id="btn-new-plan">New plan</button>
+            <button type="button" id="btn-edit-plan">Edit selected</button>
+          </div>
+          <div class="row">
+            <button type="button" id="btn-export-plans">Export plans</button>
+            <button type="button" id="btn-import-plans">Import plans</button>
+          </div>
+          <input id="plans-file-input" type="file" accept="application/json,.json" hidden />
+        </section>
+
+        <section id="road-opts" class="hidden">
+          <h2>Road path</h2>
+          <p class="hint">Click points (snaps to existing roads to join). Enter builds a seamless path. Backspace undoes · Esc clears.</p>
+          <label>Path width
+            <input id="road-path-width" type="range" min="15" max="400" value="100" />
+            <span id="road-path-width-val">1.00</span>
+          </label>
+          <div class="row">
+            <button type="button" id="btn-road-commit">Build path (Enter)</button>
+            <button type="button" id="btn-road-clear" class="secondary">Clear points</button>
+          </div>
+          <p class="hint" id="road-path-status">0 points</p>
+        </section>
+
+        <section id="vehicle-opts" class="hidden">
+          <h2>Vehicle</h2>
+          <label>Type
+            <select id="veh-type">
+              <option value="pickup">Pickup truck</option>
+              <option value="sedan">Car (sedan)</option>
+              <option value="van">Van</option>
+              <option value="schoolbus">School bus</option>
+              <option value="bus">City bus</option>
+              <option value="semi">Semi truck</option>
+            </select>
+          </label>
+          <label>Color
+            <input id="veh-color" type="color" value="#e8731a" />
+          </label>
+          <label>Rotation °
+            <input id="veh-rot" type="number" value="0" step="45" />
+          </label>
+        </section>
+
+        <section>
+          <h2>Reference overlay</h2>
+          <label>Image
+            <select id="ref-image">
+              <option value="none">None</option>
+              <option value="/ref/birdseye.png" selected>Birds-eye</option>
+              <option value="/ref/northview.png">North view</option>
+            </select>
+          </label>
+          <label>Opacity
+            <input id="ref-opacity" type="range" min="0" max="100" value="35" />
+            <span id="ref-opacity-val">35%</span>
+          </label>
+          <label>Overlay scale
+            <input id="ref-scale" type="range" min="50" max="200" value="100" />
+            <span id="ref-scale-val">100%</span>
+          </label>
+          <label>Overlay shift X
+            <input id="ref-ox" type="range" min="-50" max="50" value="0" />
+          </label>
+          <label>Overlay shift Z
+            <input id="ref-oz" type="range" min="-50" max="50" value="0" />
+          </label>
+          <label>Overlay height
+            <input id="ref-oy" type="range" min="0" max="800" value="1" />
+            <span id="ref-oy-val">0.01</span>
+          </label>
+          <p class="hint">Left-click paint · right-drag orbit · scroll zoom. Raise height to float the image above the map.</p>
+        </section>
+
+        <section>
+          <h2>Camera</h2>
+          <div class="row">
+            <button type="button" id="cam-top">Top</button>
+            <button type="button" id="cam-iso">Iso</button>
+            <button type="button" id="cam-north">North view</button>
+          </div>
+        </section>
+
+        <section>
+          <h2>File</h2>
+          <div class="row">
+            <button type="button" id="btn-export">Export JSON</button>
+            <button type="button" id="btn-import">Import JSON</button>
+          </div>
+          <input id="file-input" type="file" accept="application/json,.json" hidden />
+          <button type="button" id="btn-load-seed" class="secondary">Load Al-Rimal seed</button>
+          <p id="status" class="status"></p>
+        </section>
+
+        <section id="selection-info" class="hidden">
+          <h2>Selection</h2>
+          <p class="hint">Drag freely (no grid snap) · N/S/E/W nudge by 1 cell</p>
+          <h2>Gizmo</h2>
+          <div class="row" id="gizmo-modes">
+            <button type="button" data-gizmo="rotate" class="active" title="R">Rotate</button>
+            <button type="button" data-gizmo="scale" title="T">Scale</button>
+          </div>
+          <p class="hint" id="gizmo-hint">Rotate / Scale work on buildings, vehicles, and roads. Roads: free move + size + yaw.</p>
+          <pre id="sel-text"></pre>
+          <div class="row" id="nudge-row">
+            <button type="button" id="btn-nudge-n" title="Arrow Up">N</button>
+            <button type="button" id="btn-nudge-s" title="Arrow Down">S</button>
+            <button type="button" id="btn-nudge-w" title="Arrow Left">W</button>
+            <button type="button" id="btn-nudge-e" title="Arrow Right">E</button>
+          </div>
+          <div id="building-sel-opts">
+            <label>Resize all stacks to height
+              <div class="row">
+                <input id="sel-height" type="range" min="1" max="6" value="2" />
+                <span id="sel-height-val">2</span>
+              </div>
+            </label>
+            <div class="row">
+              <button type="button" id="btn-apply-height">Apply height</button>
+              <button type="button" id="btn-height-up" title="]">+1</button>
+              <button type="button" id="btn-height-down" title="[">−1</button>
+            </div>
+            <button type="button" id="btn-apply-label" class="secondary">Apply label / special</button>
+            <div id="hospital-cross-opts" class="hidden">
+              <p class="hint">Hospital: place the red cross on the roof</p>
+              <button type="button" id="btn-place-cross">Place red cross</button>
+            </div>
+            <button type="button" id="btn-save-as-plan" class="secondary">Save as plan</button>
+          </div>
+          <div id="road-sel-opts" class="hidden">
+            <p class="hint">Scale gizmo: X = width, Z = length (stretch / distort)</p>
+            <label>Width
+              <input id="sel-road-width" type="range" min="15" max="400" value="100" />
+              <span id="sel-road-width-val">1.00</span>
+            </label>
+          </div>
+          <button type="button" id="btn-delete-bldg" class="danger secondary">Delete piece</button>
+        </section>
+      </aside>
+      <main id="viewport"></main>
+    </div>
+
+    <div id="designer" class="hidden">
+      <div class="designer-card">
+        <header class="designer-header">
+          <h2>Building plan</h2>
+          <button type="button" id="designer-close" title="Esc">✕</button>
+        </header>
+        <div class="designer-body">
+          <div class="designer-left">
+            <label>Name
+              <input id="plan-name" type="text" placeholder="e.g. Tower L, Clinic 2x2" maxlength="32" />
+            </label>
+            <div class="row">
+              <label>Default color
+                <select id="plan-color" class="color-select"></select>
+              </label>
+              <label>Special
+                <select id="plan-special" class="special-select"></select>
+              </label>
+              <label>Grid
+                <select id="plan-size">
+                  <option value="5">5×5</option>
+                  <option value="6">6×6</option>
+                  <option value="7">7×7</option>
+                  <option value="8">8×8</option>
+                  <option value="10">10×10</option>
+                </select>
+              </label>
+            </div>
+            <div id="plan-grid" class="plan-grid"></div>
+            <p class="hint">North is up. Left-click a square to add a block (+1 height); right-click or Shift-click to remove (−1). Numbers are stack heights.</p>
+            <div class="row">
+              <button type="button" id="plan-raise">All +1</button>
+              <button type="button" id="plan-lower">All −1</button>
+              <button type="button" id="plan-clear">Clear</button>
+            </div>
+          </div>
+          <div class="designer-right">
+            <canvas id="plan-preview"></canvas>
+            <p class="hint">Isometric preview — right-drag to orbit, scroll to zoom.</p>
+          </div>
+        </div>
+        <footer class="designer-footer">
+          <span id="plan-status" class="status"></span>
+          <div class="row">
+            <button type="button" id="plan-delete" class="danger hidden">Delete plan</button>
+            <button type="button" id="plan-cancel">Cancel</button>
+            <button type="button" id="plan-save" class="primary">Save plan</button>
+          </div>
+        </footer>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Al-Rimal Quest</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="view"></canvas>
+
+      <section id="start">
+        <div class="card">
+          <p class="eyebrow">A3 FTX</p>
+          <h1>Al-Rimal Quest</h1>
+          <p>Choose how you want to enter the briefing.</p>
+          <div class="actions menu-actions">
+            <button type="button" id="btn-vr">Start game in VR</button>
+            <button type="button" id="btn-ar">Start game in AR</button>
+            <button type="button" id="btn-preview" class="secondary">
+              Preview on screen
+            </button>
+          </div>
+          <p class="fine" id="vr-note"></p>
+        </div>
+      </section>
+
+      <div id="hud" hidden>
+        <div class="hud-row">
+          <button type="button" id="btn-aircraft" data-board="aircraft">
+            Aircraft
+          </button>
+          <button type="button" id="btn-ordinance" data-board="ordinance">
+            Ordinance
+          </button>
+          <button type="button" id="btn-map">Map</button>
+        </div>
+        <p id="hint">
+          Click a button, or point at the plates and pull the trigger.
+          Right controller B opens Settings. Both grips move the table.
+        </p>
+      </div>
+
+      <figure id="lightbox" hidden>
+        <img id="lightbox-img" alt="" />
+        <figcaption id="lightbox-caption"></figcaption>
+      </figure>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
