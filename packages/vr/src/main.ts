@@ -593,7 +593,7 @@ function makeClipboard(): THREE.Group {
   ctx.fillRect(0, 0, paper.width, paper.height);
   ctx.strokeStyle = "#d9d0c0";
   ctx.lineWidth = 2;
-  for (let y = 150; y < paper.height - 30; y += 52) {
+  for (let y = 210; y < paper.height - 30; y += 52) {
     ctx.beginPath();
     ctx.moveTo(36, y);
     ctx.lineTo(paper.width - 36, y);
@@ -602,14 +602,14 @@ function makeClipboard(): THREE.Group {
   ctx.fillStyle = "#1c1a17";
   ctx.font = "700 54px Segoe UI, sans-serif";
   ctx.textAlign = "center";
-  ctx.fillText("Note", paper.width / 2, 88);
+  ctx.fillText("Note", paper.width / 2, 168);
   ctx.font = "600 40px Segoe UI, sans-serif";
   const lines = [
     "The numbers below",
     "the Ordinance title",
     "is the Bomb Damage.",
   ];
-  lines.forEach((line, i) => ctx.fillText(line, paper.width / 2, 210 + i * 78));
+  lines.forEach((line, i) => ctx.fillText(line, paper.width / 2, 280 + i * 78));
   const tex = new THREE.CanvasTexture(paper);
   tex.colorSpace = THREE.SRGBColorSpace;
   const sheet = new THREE.Mesh(
