@@ -92,6 +92,16 @@ mapRenderer.root.position.set(
 tableRig.add(mapRenderer.root);
 
 const clickables: THREE.Object3D[] = [];
+/** One gold halo per plate. It blinks until that plate is opened once. */
+interface CueButton {
+  id: BoardId;
+  plate: THREE.Mesh;
+  glow: THREE.Mesh;
+  width: number;
+  depth: number;
+  seen: boolean;
+}
+const cueButtons: CueButton[] = [];
 
 const aircraftBtn = makeButton("Aircraft", -0.24, 0.78);
 const ordinanceBtn = makeButton("Ordinance", 0.24, 0.78);
@@ -197,6 +207,7 @@ function showBoard(id: BoardId): void {
     .forEach((b) => b.classList.toggle("active", b.dataset.board === id));
   lightbox.hidden = true;
   hintEl.textContent = `${BOARDS[id].title} is on the projector. Press Map or Close to clear it.`;
+  dismissCue(id);
 }
 
 function showMap(): void {
@@ -250,6 +261,7 @@ function goToStartMenu(): void {
   }
   startEl.hidden = false;
   hudEl.hidden = true;
+  resetCues();
 }
 
 function toggleSettings(): void {
@@ -577,7 +589,10 @@ window.addEventListener("resize", () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
+const cueClock = new THREE.Clock();
+
 renderer.setAnimationLoop((_time, frame) => {
+  pulseCueButtons(cueClock.getElapsedTime());
   if (placeInFront && frame) {
     const refSpace = renderer.xr.getReferenceSpace();
     const pose = refSpace ? frame.getViewerPose(refSpace) : null;
@@ -728,14 +743,72 @@ function makeClipboard(): THREE.Group {
 }
 
 function makeButton(label: string, x: number, z: number): THREE.Mesh {
+  const width = 0.34;
+  const depth = 0.1;
+  const glowW = width + 0.04;
+  const glowD = depth + 0.04;
+  const glow = new THREE.Mesh(
+    new THREE.PlaneGeometry(1, 1),
+    new THREE.MeshBasicMaterial({
+      color: 0xe2b15a,
+      transparent: true,
+      opacity: 1,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    })
+  );
+  glow.scale.set(glowW, glowD, 1);
+  glow.position.set(x, TABLE_TOP + 0.004, z);
+  glow.rotation.x = -Math.PI / 2;
+  glow.renderOrder = 1;
+  glow.name = `${label.toLowerCase()}-cue`;
+  tableRig.add(glow);
+
   const mesh = makePlate(label, "#3a3126", "#f4efe6", 640, 200);
-  mesh.scale.set(0.34, 0.1, 1);
-  mesh.position.set(x, TABLE_TOP + 0.008, z);
+  mesh.scale.set(width, depth, 1);
+  mesh.position.set(x, TABLE_TOP + 0.01, z);
   // Lay flat on the tabletop, text readable from the near edge.
   mesh.rotation.x = -Math.PI / 2;
+  mesh.renderOrder = 2;
   mesh.userData.board = label.toLowerCase();
   mesh.name = label.toLowerCase();
+  cueButtons.push({
+    id: label.toLowerCase() as BoardId,
+    plate: mesh,
+    glow,
+    width: glowW,
+    depth: glowD,
+    seen: false,
+  });
   return mesh;
+}
+
+/** Each plate blinks on its own until that image has been opened once. */
+function pulseCueButtons(elapsed: number): void {
+  const flash = elapsed % 1 < 0.55 ? 1 : 0;
+  for (const cue of cueButtons) {
+    if (cue.seen) continue;
+    const plateMat = cue.plate.material as THREE.MeshBasicMaterial;
+    plateMat.color.setRGB(1, 1 - 0.42 * flash, 1 - 0.72 * flash);
+    const glowMat = cue.glow.material as THREE.MeshBasicMaterial;
+    glowMat.opacity = flash > 0 ? 1 : 0.04;
+  }
+}
+
+function dismissCue(id: BoardId): void {
+  const cue = cueButtons.find((item) => item.id === id);
+  if (!cue || cue.seen) return;
+  cue.seen = true;
+  (cue.plate.material as THREE.MeshBasicMaterial).color.setRGB(1, 1, 1);
+  cue.glow.visible = false;
+}
+
+function resetCues(): void {
+  for (const cue of cueButtons) {
+    cue.seen = false;
+    cue.glow.visible = true;
+    (cue.plate.material as THREE.MeshBasicMaterial).color.setRGB(1, 1, 1);
+  }
 }
 
 function makePlate(

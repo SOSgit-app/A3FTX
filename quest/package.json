@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "description": "Signed Meta Quest APK shell for Al-Rimal Quest",
   "scripts": {
+    "postinstall": "node fix-node22-spawn.js",
     "update": "bubblewrap update",
     "build": "bubblewrap build",
     "doctor": "bubblewrap doctor"
