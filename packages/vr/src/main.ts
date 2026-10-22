@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { XRControllerModelFactory } from "three/examples/jsm/webxr/XRControllerModelFactory.js";
 import { MapRenderer, parseMapJson } from "@a3-ftx/shared";
 import mapJson from "../../../maps/al-rimal.map.json";
 
@@ -293,6 +294,8 @@ interface HandState {
 }
 
 const hands: HandState[] = [];
+const controllerGrips: THREE.Group[] = [];
+const controllerModelFactory = new XRControllerModelFactory();
 
 function bindController(index: number): void {
   const controller = renderer.xr.getController(index);
@@ -321,6 +324,49 @@ function bindController(index: number): void {
   });
   hands.push(hand);
   scene.add(controller);
+
+  const grip = renderer.xr.getControllerGrip(index);
+  const model = controllerModelFactory.createControllerModel(grip);
+  const fallback = makeControllerBody();
+  grip.add(fallback);
+  grip.add(model);
+  grip.userData.model = model;
+  grip.userData.fallback = fallback;
+  controllerGrips.push(grip);
+  scene.add(grip);
+}
+
+/** Shown until the Quest controller model finishes loading. */
+function makeControllerBody(): THREE.Group {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(0.046, 0.036, 0.15),
+    new THREE.MeshStandardMaterial({ color: 0x1c1c1c, roughness: 0.45, metalness: 0.4 })
+  );
+  body.position.z = -0.03;
+  g.add(body);
+  const plate = new THREE.Mesh(
+    new THREE.BoxGeometry(0.04, 0.006, 0.07),
+    new THREE.MeshStandardMaterial({ color: 0x3a3a3a, roughness: 0.35, metalness: 0.25 })
+  );
+  plate.position.set(0, 0.02, -0.01);
+  g.add(plate);
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(0.03, 0.004, 8, 18),
+    new THREE.MeshStandardMaterial({ color: 0xe2b15a, metalness: 0.55, roughness: 0.3 })
+  );
+  ring.rotation.x = Math.PI / 2;
+  ring.position.z = 0.04;
+  g.add(ring);
+  return g;
+}
+
+function revealLoadedControllers(): void {
+  for (const grip of controllerGrips) {
+    const model = grip.userData.model as THREE.Object3D | undefined;
+    const fallback = grip.userData.fallback as THREE.Object3D | undefined;
+    if (fallback?.visible && model && model.children.length > 0) fallback.visible = false;
+  }
 }
 bindController(0);
 bindController(1);
@@ -421,7 +467,7 @@ async function startImmersive(mode: "immersive-vr" | "immersive-ar"): Promise<vo
   try {
     renderer.xr.setReferenceSpaceType("local-floor");
     const session = await xr.requestSession(mode, {
-      optionalFeatures: ["local-floor"],
+      requiredFeatures: ["local-floor"],
     });
     applyPlayMode(mode === "immersive-ar" ? "ar" : "vr");
     showBriefing();
@@ -465,13 +511,49 @@ void (async () => {
   else setVrNote("No headset session in this browser. Preview on screen is available.");
 })();
 
+/** Authored layout: the player stands at the origin facing -Z, table center 1.45 m ahead. */
+const TABLE_DISTANCE = 1.45;
+let placeInFront = false;
+const headQuat = new THREE.Quaternion();
+const lookDir = new THREE.Vector3();
+
+function placeBriefingInFront(transform: XRRigidTransform): void {
+  lookDir.set(0, 0, -1).applyQuaternion(
+    headQuat.set(transform.orientation.x, transform.orientation.y, transform.orientation.z, transform.orientation.w)
+  );
+  lookDir.y = 0;
+  if (lookDir.lengthSq() < 1e-4) lookDir.set(0, 0, -1);
+  else lookDir.normalize();
+  const yaw = Math.atan2(-lookDir.x, -lookDir.z);
+  const x = transform.position.x;
+  const z = transform.position.z;
+  room.position.set(x, 0, z);
+  room.rotation.set(0, yaw, 0);
+  tableRig.position.set(x + lookDir.x * TABLE_DISTANCE, 0, z + lookDir.z * TABLE_DISTANCE);
+  tableRig.rotation.set(0, yaw, 0);
+  tableRig.scale.setScalar(1);
+  grabbing = false;
+}
+
+function resetBriefingLayout(): void {
+  room.position.set(0, 0, 0);
+  room.rotation.set(0, 0, 0);
+  tableRig.position.set(0, 0, -TABLE_DISTANCE);
+  tableRig.rotation.set(0, 0, 0);
+  tableRig.scale.setScalar(1);
+  grabbing = false;
+}
+
 renderer.xr.addEventListener("sessionstart", () => {
   controls.enabled = false;
   lightbox.hidden = true;
   applyPlayMode(playMode);
+  placeInFront = true;
 });
 renderer.xr.addEventListener("sessionend", () => {
   controls.enabled = true;
+  placeInFront = false;
+  resetBriefingLayout();
   applyPlayMode("screen");
 });
 
@@ -489,9 +571,20 @@ window.addEventListener("resize", () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-renderer.setAnimationLoop(() => {
+renderer.setAnimationLoop((_time, frame) => {
+  if (placeInFront && frame) {
+    const refSpace = renderer.xr.getReferenceSpace();
+    const pose = refSpace ? frame.getViewerPose(refSpace) : null;
+    if (pose) {
+      placeInFront = false;
+      placeBriefingInFront(pose.transform);
+    }
+  }
   if (!renderer.xr.isPresenting) controls.update();
-  if (renderer.xr.isPresenting) updateControllers();
+  if (renderer.xr.isPresenting) {
+    revealLoadedControllers();
+    updateControllers();
+  }
   renderer.render(scene, camera);
 });
 
