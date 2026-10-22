@@ -1,0 +1,14 @@
+{
+  "name": "@a3-ftx/quest",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Signed Meta Quest APK shell for Al-Rimal Quest",
+  "scripts": {
+    "update": "bubblewrap update",
+    "build": "bubblewrap build",
+    "doctor": "bubblewrap doctor"
+  },
+  "devDependencies": {
+    "@meta-quest/bubblewrap-cli": "1.24.1"
+  }
+}

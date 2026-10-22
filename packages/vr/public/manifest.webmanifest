@@ -1,0 +1,29 @@
+{
+  "name": "Al-Rimal Quest",
+  "short_name": "Al-Rimal",
+  "start_url": "/A3FTX/",
+  "scope": "/A3FTX/",
+  "display": "standalone",
+  "background_color": "#2a2826",
+  "theme_color": "#1c1814",
+  "icons": [
+    {
+      "src": "/A3FTX/icons/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "/A3FTX/icons/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "/A3FTX/icons/icon-512-maskable.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+  ]
+}

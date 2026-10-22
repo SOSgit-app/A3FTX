@@ -1,5 +1,12 @@
 node_modules/
 dist/
+quest/android.keystore
+quest/keystore.properties
+quest/*.apk
+quest/*.aab
+quest/.gradle/
+quest/app/build/
+quest/build/
 .DS_Store
 *.local
 .vite/

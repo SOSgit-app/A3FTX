@@ -493,6 +493,12 @@ document.getElementById("btn-preview")!.addEventListener("click", () => {
   showBriefing();
 });
 
+// The Quest app icon is the user gesture. The store build should enter VR
+// immediately; the browser site keeps the landing menu.
+if ("getDigitalGoodsService" in window) {
+  void startImmersive("immersive-vr");
+}
+
 void (async () => {
   const xr = navigator.xr;
   if (!xr) {
