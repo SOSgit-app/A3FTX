@@ -98,13 +98,6 @@ tableRig.add(aircraftBtn, ordinanceBtn);
 clickables.push(aircraftBtn, ordinanceBtn);
 tableRig.add(makeClipboard());
 
-const moveHint = makePlate("Both grips to move", "#3a3126", "#f4efe6", 768, 180);
-moveHint.scale.set(0.55, 0.13, 1);
-moveHint.position.set(0, 1.22, 0.95);
-moveHint.rotation.x = -0.45;
-moveHint.visible = false;
-tableRig.add(moveHint);
-
 const SCREEN_W = 2.4;
 const SCREEN_H = 1.42;
 const projector = buildProjector();
@@ -122,37 +115,40 @@ const projectorBody = new THREE.Mesh(
 );
 projectorBody.position.copy(beam.position);
 scene.add(projectorBody);
+// Screen, beam, and projector body share the table rig, so a grip move or resize carries them too.
+tableRig.attach(projector);
+tableRig.attach(beam);
+tableRig.attach(beam.target);
+tableRig.attach(projectorBody);
 
 const settingsMenu = new THREE.Group();
 settingsMenu.name = "settings";
 settingsMenu.visible = false;
 scene.add(settingsMenu);
 const settingsBg = new THREE.Mesh(
-  new THREE.PlaneGeometry(0.52, 0.58),
+  new THREE.PlaneGeometry(0.52, 0.38),
   new THREE.MeshBasicMaterial({ color: 0x1c1814, side: THREE.DoubleSide })
 );
 settingsMenu.add(settingsBg);
 const settingsTitle = makePlate("Settings", "#d9d4cc", "#1a1a1a", 640, 160);
 settingsTitle.scale.set(0.44, 0.1, 1);
-settingsTitle.position.set(0, 0.2, 0.01);
+settingsTitle.position.set(0, 0.09, 0.01);
 settingsMenu.add(settingsTitle);
 const goMenuBtn = makePlate("Go to menu", "#3a3126", "#f4efe6", 640, 180);
 goMenuBtn.scale.set(0.44, 0.12, 1);
-goMenuBtn.position.set(0, 0.04, 0.01);
+goMenuBtn.position.set(0, -0.08, 0.01);
 goMenuBtn.userData.action = "goto-menu";
 settingsMenu.add(goMenuBtn);
-const moveTableBtn = makePlate("Move table", "#3a3126", "#f4efe6", 640, 180);
-moveTableBtn.scale.set(0.44, 0.12, 1);
-moveTableBtn.position.set(0, -0.12, 0.01);
-moveTableBtn.userData.action = "move-table";
-settingsMenu.add(moveTableBtn);
-clickables.push(goMenuBtn, moveTableBtn);
+clickables.push(goMenuBtn);
 
-let moveTableMode = false;
 let grabbing = false;
 const grabOffset = new THREE.Vector3();
 let grabHandYaw = 0;
 let grabRigYaw = 0;
+let grabScale = 1;
+let grabHandDist = 1;
+const MIN_TABLE_SCALE = 0.4;
+const MAX_TABLE_SCALE = 2.5;
 const leftPos = new THREE.Vector3();
 const rightPos = new THREE.Vector3();
 const handMid = new THREE.Vector3();
@@ -226,10 +222,6 @@ function activate(object: THREE.Object3D | null): void {
     goToStartMenu();
     return;
   }
-  if (action === "move-table") {
-    setMoveTableMode(!moveTableMode);
-    return;
-  }
   const id = object.userData.board as BoardId | undefined;
   if (id === "aircraft" || id === "ordinance") {
     if (openBoard === id) showMap();
@@ -248,19 +240,9 @@ function isShown(object: THREE.Object3D): boolean {
   return true;
 }
 
-function setMoveTableMode(on: boolean): void {
-  moveTableMode = on;
-  if (!on) grabbing = false;
-  moveHint.visible = on;
-  (moveTableBtn.material as THREE.MeshBasicMaterial).color.set(on ? "#e2b15a" : "#ffffff");
-  hintEl.textContent = on
-    ? "Move table is on. Squeeze both grips, move your hands, then release to place it."
-    : "Right controller B opens Settings. Choose Move table, then use both grips.";
-}
-
 function goToStartMenu(): void {
   showMap();
-  setMoveTableMode(false);
+  grabbing = false;
   settingsMenu.visible = false;
   if (renderer.xr.isPresenting) {
     void renderer.xr.getSession()?.end();
@@ -273,9 +255,8 @@ function toggleSettings(): void {
   settingsMenu.visible = !settingsMenu.visible;
   if (settingsMenu.visible) {
     placeSettingsMenu();
-    hintEl.textContent = moveTableMode
-      ? "Move table is on. Squeeze both grips to pick it up. B closes Settings."
-      : "Settings: point and trigger. Go to menu leaves the briefing. B closes this.";
+    hintEl.textContent =
+      "Settings: point and trigger. Go to menu leaves the briefing. Both grips still move the table. B closes this.";
   }
 }
 
@@ -377,8 +358,7 @@ function updateControllers(): void {
     grabbing = false;
     return;
   }
-  const bothGrips =
-    moveTableMode && buttonDown(left.source, 1) && buttonDown(right.source, 1);
+  const bothGrips = buttonDown(left.source, 1) && buttonDown(right.source, 1);
   if (!bothGrips) {
     grabbing = false;
     return;
@@ -387,10 +367,13 @@ function updateControllers(): void {
   right.group.getWorldPosition(rightPos);
   handMid.copy(leftPos).add(rightPos).multiplyScalar(0.5);
   const yaw = Math.atan2(rightPos.x - leftPos.x, rightPos.z - leftPos.z);
+  const handDist = Math.max(0.05, leftPos.distanceTo(rightPos));
   if (!grabbing) {
     grabOffset.copy(tableRig.position).sub(handMid);
     grabHandYaw = yaw;
     grabRigYaw = tableRig.rotation.y;
+    grabScale = tableRig.scale.x;
+    grabHandDist = handDist;
     grabbing = true;
     return;
   }
@@ -399,6 +382,12 @@ function updateControllers(): void {
   tableRig.position.copy(handMid).add(rotatedOffset);
   tableRig.position.y = Math.max(0, tableRig.position.y);
   tableRig.rotation.y = grabRigYaw + delta;
+  const nextScale = THREE.MathUtils.clamp(
+    grabScale * (handDist / grabHandDist),
+    MIN_TABLE_SCALE,
+    MAX_TABLE_SCALE
+  );
+  tableRig.scale.setScalar(nextScale);
 }
 
 document.getElementById("btn-aircraft")!.addEventListener("click", () => showBoard("aircraft"));
