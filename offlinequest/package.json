@@ -1,0 +1,9 @@
+{
+  "name": "@a3-ftx/offlinequest",
+  "private": true,
+  "version": "3.0.0",
+  "description": "Fully offline signed Quest APK for Time Sensitive Targeting SOS",
+  "scripts": {
+    "build": "node build.js"
+  }
+}

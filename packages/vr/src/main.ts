@@ -308,6 +308,7 @@ interface HandState {
 const hands: HandState[] = [];
 const controllerGrips: THREE.Group[] = [];
 const controllerModelFactory = new XRControllerModelFactory();
+controllerModelFactory.setPath(asset("webxr-profiles"));
 
 function bindController(index: number): void {
   const controller = renderer.xr.getController(index);

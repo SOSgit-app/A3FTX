@@ -4,9 +4,17 @@ quest/android.keystore
 quest/keystore.properties
 quest/*.apk
 quest/*.aab
+quest/*.idsig
 quest/.gradle/
 quest/app/build/
 quest/build/
+offlinequest/local.properties
+offlinequest/.gradle/
+offlinequest/build/
+offlinequest/app/build/
+offlinequest/app/src/main/assets/
+offlinequest/*.apk
+offlinequest/*.idsig
 .DS_Store
 *.local
 .vite/
